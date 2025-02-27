@@ -1,0 +1,2309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gomoku</title>
+    <style>
+        /* Base styles and variables */
+        :root {
+            --primary-color: #34495e;
+            --secondary-color: #2c3e50;
+            --accent-color: #3498db;
+            --text-color: #333;
+            --light-text: #f5f5f5;
+            --board-bg: #e6d0a8;
+            --board-border: #8b4513;
+            --board-line: rgba(0, 0, 0, 0.8);
+            --black-stone: #111;
+            --white-stone: #f9f9f9;
+            --shadow-color: rgba(0, 0, 0, 0.2);
+            --highlight-color: #e74c3c;
+            --hint-color: #2ecc71;
+            --forbidden-color: rgba(255, 0, 0, 0.5);
+        }
+
+        /* Global styles for better mobile experience */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 10px;
+            color: var(--text-color);
+            min-height: 100vh;
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+
+        /* Header section */
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 650px;
+        }
+
+        .title-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--primary-color);
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(16px, 5vw, 24px);
+            color: var(--light-text);
+            font-weight: 600;
+        }
+
+        /* Main content wrapper */
+        .content-wrapper {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        /* Game container */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            max-width: 100%;
+        }
+
+        /* Settings panel */
+        .settings-panel {
+            background-color: white;
+            padding: 12px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .setting-group {
+            margin-bottom: 10px;
+        }
+
+        .setting-label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        select {
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            width: 100%;
+            font-size: 14px;
+        }
+
+        /* Board wrapper */
+        .board-wrapper {
+            position: relative;
+            padding: 5px;
+            background: var(--board-border);
+            border-radius: 3px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            margin-bottom: 15px;
+            max-width: 100%;
+            max-height: 70vh;
+            overflow: auto;
+        }
+
+        /* Game board */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(15, minmax(20px, 30px));
+            grid-template-rows: repeat(15, minmax(20px, 30px));
+            background: var(--board-bg);
+            position: relative;
+            border: 1px solid var(--board-border);
+        }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .cell::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background-color: var(--board-line);
+        }
+
+        .cell::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 1px;
+            height: 100%;
+            background-color: var(--board-line);
+        }
+
+        /* Stone styles */
+        .stone {
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+
+        .black {
+            background: var(--black-stone);
+        }
+
+        .white {
+            background: var(--white-stone);
+            border: 1px solid #ccc;
+        }
+
+        .forbidden {
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: var(--forbidden-color);
+            z-index: 0;
+        }
+
+        /* Board markers */
+        .dot {
+            position: absolute;
+            width: 20%;
+            height: 20%;
+            background-color: var(--board-line);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+
+        .highlight {
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            border: 2px solid var(--highlight-color);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            box-sizing: border-box;
+        }
+
+        /* Game controls */
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        button {
+            padding: 8px 12px;
+            background-color: var(--primary-color);
+            color: var(--light-text);
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+            touch-action: manipulation;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .lang-btn {
+            background-color: var(--accent-color);
+            padding: 6px 10px;
+            font-size: 13px;
+        }
+
+        /* Status display */
+        .status {
+            margin-top: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 8px 15px;
+            background-color: var(--primary-color);
+            color: var(--light-text);
+            border-radius: 3px;
+            min-width: 180px;
+            text-align: center;
+        }
+
+        /* Move log panel */
+        .move-log-panel {
+            min-width: 240px;
+            max-width: 100%;
+            flex: 1;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            margin-bottom: 20px;
+            align-self: flex-start;
+        }
+
+        .move-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .move-count {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--primary-color);
+        }
+
+        .move-log {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 10px;
+            padding-right: 5px;
+        }
+
+        .move-log::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .move-log::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 5px;
+        }
+
+        .move-log::-webkit-scrollbar-thumb {
+            background: #bbb;
+            border-radius: 5px;
+        }
+
+        .move-item {
+            display: flex;
+            padding: 6px 3px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .move-number {
+            min-width: 25px;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .move-player {
+            margin-right: 5px;
+            font-weight: 600;
+        }
+
+        .move-position {
+            color: #444;
+        }
+
+        /* Responsive design adjustments */
+        @media (max-width: 768px) {
+            .content-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .game-container {
+                align-items: center;
+                order: -1;
+            }
+
+            .move-log-panel {
+                width: 100%;
+            }
+
+            .controls {
+                justify-content: center;
+            }
+
+            button {
+                padding: 10px 15px;
+                font-size: 16px;
+                min-width: 80px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .board-wrapper {
+                padding: 3px;
+            }
+
+            .settings-panel {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-wrap: wrap;
+            }
+
+            button {
+                flex: 1 0 calc(50% - 8px);
+                margin-bottom: 8px;
+            }
+        }
+
+        /* Victory Dialog */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .dialog {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 300px;
+            width: 90%;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .dialog-title {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .dialog-message {
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .dialog-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="title-container">
+            <h1 id="title">Gomoku</h1>
+            <button id="toggleLang" class="lang-btn">中文</button>
+        </div>
+    </div>
+
+    <div class="content-wrapper">
+        <div class="game-container">
+            <div class="board-wrapper">
+                <div class="board" id="board"></div>
+            </div>
+
+            <div class="settings-panel">
+                <div class="setting-group">
+                    <label class="setting-label" for="ruleSelect">Rules:</label>
+                    <select id="ruleSelect">
+                        <option value="standard">Standard (Swap2)</option>
+                        <option value="renju">Renju</option>
+                        <option value="freestyle" selected>Freestyle</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label" for="aiAlgorithm">AI Algorithm:</label>
+                    <select id="aiAlgorithm">
+                        <option value="minimax">Minimax</option>
+                        <option value="montecarlo">Monte Carlo</option>
+                        <option value="defensive">Defensive</option>
+                        <option value="aggressive">Aggressive</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label" for="difficultySelect">Difficulty:</label>
+                    <select id="difficultySelect">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label" for="colorSelect">Play as:</label>
+                    <select id="colorSelect">
+                        <option value="black">Black</option>
+                        <option value="white">White</option>
+                        <option value="random">Random</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="newGame" class="control-btn">New Game</button>
+                <button id="undo" class="control-btn">Undo</button>
+                <button id="hint" class="control-btn">Hint</button>
+                <button id="showForbidden" class="control-btn">Show Forbidden</button>
+            </div>
+
+            <div class="status" id="status">Black's Turn</div>
+        </div>
+
+        <div class="move-log-panel">
+            <div class="move-log-header">
+                <div class="move-count" id="moveCount">Moves: 0</div>
+                <button id="clearLog" class="small-btn">Clear Log</button>
+            </div>
+            <div class="move-log" id="moveLog"></div>
+        </div>
+    </div>
+
+    <div id="victoryDialog" class="dialog-overlay" style="display: none;">
+        <div class="dialog">
+            <div class="dialog-title" id="dialogTitle">Game Over</div>
+            <div class="dialog-message" id="dialogMessage">Player has won the game!</div>
+            <div class="dialog-buttons">
+                <button id="newGameBtn" class="btn-primary">New Game</button>
+                <button id="continueBtn" class="btn-secondary">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Language configuration
+        const translations = {
+            'en': {
+                'title': 'Gomoku',
+                'toggleLang': '中文',
+                'newGame': 'New Game',
+                'undo': 'Undo',
+                'hint': 'Hint',
+                'showForbidden': 'Show Forbidden',
+                'hideForbidden': 'Hide Forbidden',
+                'blackTurn': 'Black\'s Turn',
+                'whiteTurn': 'White\'s Turn',
+                'blackWin': 'Black Wins!',
+                'whiteWin': 'White Wins!',
+                'draw': 'Draw!',
+                'thinking': 'AI is thinking...',
+                'moves': 'Moves',
+                'clearLog': 'Clear Log',
+                'black': 'Black',
+                'white': 'White',
+                'col': 'Col',
+                'row': 'Row',
+                'undoAction': 'Undid move',
+                'rules': 'Rules',
+                'ruleStandard': 'Standard (Swap2)',
+                'ruleRenju': 'Renju',
+                'ruleFreestyle': 'Freestyle',
+                'aiAlgorithm': 'AI Algorithm',
+                'aiMinimax': 'Minimax',
+                'aiMonteCarlo': 'Monte Carlo',
+                'aiDefensive': 'Defensive',
+                'aiAggressive': 'Aggressive',
+                'difficulty': 'Difficulty',
+                'difficultyEasy': 'Easy',
+                'difficultyMedium': 'Medium',
+                'difficultyHard': 'Hard',
+                'playAs': 'Play as',
+                'playAsBlack': 'Black',
+                'playAsWhite': 'White',
+                'playAsRandom': 'Random',
+                'openingPhase': 'Opening Phase',
+                'selectPositions': 'Select positions for Swap2',
+                'selectColor': 'Select color to play',
+                'forbiddenMove': 'Forbidden move - try another position',
+                'gameOver': 'Game Over',
+                'hasWon': 'has won the game!',
+                'startNewGame': 'Start New Game',
+                'continue': 'Continue'
+            },
+            'tw': {
+                'title': '五子棋',
+                'toggleLang': 'English',
+                'newGame': '新遊戲',
+                'undo': '悔棋',
+                'hint': '提示',
+                'showForbidden': '顯示禁手',
+                'hideForbidden': '隱藏禁手',
+                'blackTurn': '黑方回合',
+                'whiteTurn': '白方回合',
+                'blackWin': '黑方獲勝！',
+                'whiteWin': '白方獲勝！',
+                'draw': '平局！',
+                'thinking': '電腦思考中...',
+                'moves': '步數',
+                'clearLog': '清空記錄',
+                'black': '黑方',
+                'white': '白方',
+                'col': '列',
+                'row': '行',
+                'undoAction': '悔棋操作',
+                'rules': '規則',
+                'ruleStandard': '標準 (交換2)',
+                'ruleRenju': '連珠',
+                'ruleFreestyle': '自由式',
+                'aiAlgorithm': 'AI演算法',
+                'aiMinimax': '極小化極大演算法',
+                'aiMonteCarlo': '蒙地卡羅',
+                'aiDefensive': '防守型',
+                'aiAggressive': '進攻型',
+                'difficulty': '難度',
+                'difficultyEasy': '簡單',
+                'difficultyMedium': '中等',
+                'difficultyHard': '困難',
+                'playAs': '執子',
+                'playAsBlack': '黑子',
+                'playAsWhite': '白子',
+                'playAsRandom': '隨機',
+                'openingPhase': '開局階段',
+                'selectPositions': '選擇交換2的位置',
+                'selectColor': '選擇執子顏色',
+                'forbiddenMove': '禁手位置 - 請選擇其他位置',
+                'gameOver': '遊戲結束',
+                'hasWon': '贏得了比賽！',
+                'startNewGame': '開始新遊戲',
+                'continue': '繼續'
+            }
+        };
+
+        // Game configuration
+        const BOARD_SIZE = 15;
+
+        // Game state
+        let currentLang = 'en';
+        let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
+        let gameType = "freestyle"; // standard, renju, freestyle
+        let aiAlgorithm = "minimax"; // minimax, montecarlo, defensive, aggressive
+        let difficulty = "medium"; // easy, medium, hard
+        let playerColor = "black"; // black, white, random
+        let currentPlayer = 1; // 1 for black, 2 for white
+        let humanPlayer = 1;
+        let computerPlayer = 2;
+        let gameOver = false;
+        let gamePhase = "play"; // Since freestyle doesn't use opening phase
+        let openingMoves = [];
+        let moveHistory = [];
+        let hintMove = null;
+        let moveCount = 0;
+        let showingForbidden = false;
+        let forbiddenMoves = [];
+
+        // DOM elements
+        const boardElement = document.getElementById('board');
+        const statusElement = document.getElementById('status');
+        const newGameButton = document.getElementById('newGame');
+        const undoButton = document.getElementById('undo');
+        const hintButton = document.getElementById('hint');
+        const showForbiddenButton = document.getElementById('showForbidden');
+        const toggleLangButton = document.getElementById('toggleLang');
+        const titleElement = document.getElementById('title');
+        const moveCountElement = document.getElementById('moveCount');
+        const moveLogElement = document.getElementById('moveLog');
+        const clearLogButton = document.getElementById('clearLog');
+        const ruleSelect = document.getElementById('ruleSelect');
+        const aiAlgorithmSelect = document.getElementById('aiAlgorithm');
+        const difficultySelect = document.getElementById('difficultySelect');
+        const colorSelect = document.getElementById('colorSelect');
+        const victoryDialog = document.getElementById('victoryDialog');
+        const dialogTitle = document.getElementById('dialogTitle');
+        const dialogMessage = document.getElementById('dialogMessage');
+        const newGameBtn = document.getElementById('newGameBtn');
+        const continueBtn = document.getElementById('continueBtn');
+
+        /**
+         * Initialize the game
+         * Sets up event listeners and starts a new game
+         */
+        function init() {
+            // Add event listeners for settings changes
+            ruleSelect.addEventListener('change', function () {
+                gameType = this.value;
+            });
+
+            aiAlgorithmSelect.addEventListener('change', function () {
+                aiAlgorithm = this.value;
+            });
+
+            difficultySelect.addEventListener('change', function () {
+                difficulty = this.value;
+            });
+
+            colorSelect.addEventListener('change', function () {
+                playerColor = this.value;
+            });
+
+            // Add event listeners for buttons
+            newGameButton.addEventListener('click', startNewGame);
+            undoButton.addEventListener('click', undoMove);
+            hintButton.addEventListener('click', showHint);
+            showForbiddenButton.addEventListener('click', toggleForbiddenMoves);
+            toggleLangButton.addEventListener('click', toggleLanguage);
+            clearLogButton.addEventListener('click', clearMoveLog);
+
+            // Add event listeners for dialog buttons
+            newGameBtn.addEventListener('click', function () {
+                hideVictoryDialog();
+                startNewGame();
+            });
+
+            continueBtn.addEventListener('click', hideVictoryDialog);
+
+            // Initialize the board
+            initializeBoard();
+            startNewGame();
+        }
+
+        /**
+         * Show victory dialog when a player wins
+         * @param {number} winner - The winning player (1 for black, 2 for white)
+         */
+        function showVictoryDialog(winner) {
+            const winnerName = winner === 1 ?
+                translations[currentLang].black :
+                translations[currentLang].white;
+
+            dialogTitle.textContent = translations[currentLang].gameOver || "Game Over";
+            dialogMessage.textContent = `${winnerName} ${translations[currentLang].hasWon || "has won the game!"}`;
+
+            // Show the dialog
+            victoryDialog.style.display = 'flex';
+        }
+
+        /**
+         * Hide the victory dialog
+         */
+        function hideVictoryDialog() {
+            victoryDialog.style.display = 'none';
+        }
+
+        /**
+         * Initialize the game board
+         * Creates the visual board and sets up event listeners
+         */
+        function initializeBoard() {
+            boardElement.innerHTML = '';
+
+            // Create board cells
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.addEventListener('click', handleCellClick);
+                    boardElement.appendChild(cell);
+
+                    // Add star points (traditional markers)
+                    if ((i === 3 || i === 7 || i === 11) &&
+                        (j === 3 || j === 7 || j === 11)) {
+                        const dot = document.createElement('div');
+                        dot.className = 'dot';
+                        cell.appendChild(dot);
+                    }
+                }
+            }
+
+            updateStatus();
+            updateMoveCount();
+        }
+
+        /**
+ * Start a new game
+ * Resets the board and game state
+ */
+        function startNewGame() {
+            board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
+            moveHistory = [];
+            openingMoves = [];
+            hintMove = null;
+            moveCount = 0;
+            gameOver = false;
+            forbiddenMoves = [];
+
+            // Determine player colors
+            if (playerColor === "random") {
+                humanPlayer = Math.random() < 0.5 ? 1 : 2;
+            } else {
+                humanPlayer = playerColor === "black" ? 1 : 2;
+            }
+            computerPlayer = humanPlayer === 1 ? 2 : 1;
+
+            // Set the initial player and game phase based on the selected rules
+            if (gameType === "standard") {
+                // Start with Swap2 opening
+                gamePhase = "opening";
+                currentPlayer = 1; // Black always starts
+            } else {
+                // For Renju and Freestyle, just start playing
+                gamePhase = "play";
+                currentPlayer = 1; // Black always starts
+
+                // If computer plays black, make its move
+                if (currentPlayer === computerPlayer) {
+                    setTimeout(computerMove, 500);
+                }
+            }
+
+            renderBoard();
+            updateStatus();
+            updateMoveCount();
+
+            // Clear move log if it has content
+            if (moveLogElement.children.length > 0) {
+                clearMoveLog();
+            }
+
+            // Hide forbidden moves indicator when starting a new game
+            showingForbidden = false;
+            showForbiddenButton.textContent = translations[currentLang].showForbidden;
+        }
+
+        /**
+         * Handle player's move when clicking a cell
+         * @param {Event} event - The click event
+         */
+        function handleCellClick(event) {
+            if (gameOver) return;
+
+            const row = parseInt(event.currentTarget.dataset.row);
+            const col = parseInt(event.currentTarget.dataset.col);
+
+            if (gamePhase === "opening") {
+                // Handle Swap2 opening phase
+                handleOpeningPhase(row, col);
+            } else if (gamePhase === "play") {
+                // Standard gameplay phase
+                if (currentPlayer !== humanPlayer) return;
+
+                if (board[row][col] === 0) {
+                    // Check for forbidden moves in Renju rules for black
+                    if (gameType === "renju" && currentPlayer === 1 && isForbiddenMove(row, col)) {
+                        statusElement.textContent = translations[currentLang].forbiddenMove;
+                        setTimeout(() => updateStatus(), 1500);
+                        return;
+                    }
+
+                    makeMove(row, col);
+
+                    if (!gameOver && currentPlayer === computerPlayer) {
+                        // AI's turn
+                        updateStatus(translations[currentLang].thinking);
+                        setTimeout(computerMove, 700);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Handle the Swap2 opening phase
+         * @param {number} row - Row index
+         * @param {number} col - Column index
+         */
+        function handleOpeningPhase(row, col) {
+            if (openingMoves.length < 3) {
+                // First three stones are placed
+                if (board[row][col] === 0) {
+                    // Alternate black and white for first three moves
+                    const stoneColor = openingMoves.length % 2 === 0 ? 1 : 2;
+                    board[row][col] = stoneColor;
+                    openingMoves.push({ row, col, player: stoneColor });
+
+                    renderBoard();
+
+                    if (openingMoves.length === 3) {
+                        // After third stone, second player chooses color
+                        gamePhase = "swap2";
+                        updateStatus(translations[currentLang].selectColor);
+
+                        // Create color selection buttons
+                        const blackBtn = document.createElement('button');
+                        blackBtn.textContent = translations[currentLang].playAsBlack;
+                        blackBtn.onclick = () => selectColorForSwap2(1);
+
+                        const whiteBtn = document.createElement('button');
+                        whiteBtn.textContent = translations[currentLang].playAsWhite;
+                        whiteBtn.onclick = () => selectColorForSwap2(2);
+
+                        statusElement.innerHTML = '';
+                        statusElement.appendChild(document.createTextNode(translations[currentLang].selectColor + ' '));
+                        statusElement.appendChild(blackBtn);
+                        statusElement.appendChild(document.createTextNode(' '));
+                        statusElement.appendChild(whiteBtn);
+                    } else {
+                        updateStatus(translations[currentLang].selectPositions + ` (${openingMoves.length}/3)`);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Handle color selection for Swap2 opening
+         * @param {number} selectedColor - 1 for black, 2 for white
+         */
+        function selectColorForSwap2(selectedColor) {
+            humanPlayer = selectedColor;
+            computerPlayer = humanPlayer === 1 ? 2 : 1;
+            currentPlayer = 1; // Black always goes first in the main game
+            gamePhase = "play";
+
+            // Convert opening moves to regular moves
+            openingMoves.forEach(move => {
+                moveHistory.push(move);
+                moveCount++;
+                addMoveToLog(move.row, move.col, move.player);
+            });
+
+            updateMoveCount();
+            updateStatus();
+
+            // If computer plays black, make its move
+            if (currentPlayer === computerPlayer) {
+                setTimeout(computerMove, 500);
+            }
+        }
+
+        /**
+         * Make a move at the specified position
+         * @param {number} row - Row index
+         * @param {number} col - Column index
+         */
+        function makeMove(row, col) {
+            board[row][col] = currentPlayer;
+            moveHistory.push({ row, col, player: currentPlayer });
+            moveCount++;
+
+            // Add move to the log
+            addMoveToLog(row, col, currentPlayer);
+
+            renderBoard();
+            updateMoveCount();
+
+            if (checkWin(row, col)) {
+                gameOver = true;
+                updateStatus(currentPlayer === 1 ? translations[currentLang].blackWin : translations[currentLang].whiteWin);
+
+                // Show victory dialog
+                showVictoryDialog(currentPlayer);
+                return;
+            }
+
+            if (checkDraw()) {
+                gameOver = true;
+                updateStatus(translations[currentLang].draw);
+                return;
+            }
+
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            updateStatus();
+
+            // Clear hint if there was one
+            hintMove = null;
+        }
+
+        /**
+         * Check if a move is a forbidden move according to Renju rules
+         * @param {number} row - Row index
+         * @param {number} col - Column index
+         * @returns {boolean} True if the move is forbidden
+         */
+        function isForbiddenMove(row, col) {
+            // Only apply forbidden moves to black (player 1) in Renju rules
+            if (gameType !== "renju" || currentPlayer !== 1) {
+                return false;
+            }
+
+            // Check for overlines (more than 5 in a row), which are forbidden
+            if (wouldCreateOverline(row, col)) {
+                return true;
+            }
+
+            // Check for double-three (two open threes created in one move)
+            if (wouldCreateDoubleThreat(row, col, 3)) {
+                return true;
+            }
+
+            // Check for double-four (two open fours created in one move)
+            if (wouldCreateDoubleThreat(row, col, 4)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        /**
+         * Check if placing a stone would create an overline (more than five in a row)
+         * @param {number} row - Row index
+         * @param {number} col - Column index
+         * @returns {boolean} True if move creates an overline
+         */
+        function wouldCreateOverline(row, col) {
+            const directions = [
+                [0, 1],  // horizontal
+                [1, 0],  // vertical
+                [1, 1],  // diagonal down-right
+                [1, -1]  // diagonal down-left
+            ];
+
+            for (const [dr, dc] of directions) {
+                let count = 1; // Start with 1 for the stone we're placing
+
+                // Count in positive direction
+                for (let i = 1; i < 7; i++) { // Check up to 6 stones (overline)
+                    const r = row + dr * i;
+                    const c = col + dc * i;
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE || board[r][c] !== 1) {
+                        break;
+                    }
+                    count++;
+                }
+
+                // Count in negative direction
+                for (let i = 1; i < 7; i++) {
+                    const r = row - dr * i;
+                    const c = col - dc * i;
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE || board[r][c] !== 1) {
+                        break;
+                    }
+                    count++;
+                }
+
+                if (count > 5) {
+                    return true; // Overline detected
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * Check if placing a stone would create a double-three or double-four
+         * @param {number} row - Row index
+         * @param {number} col - Column index
+         * @param {number} threatLength - Length of threat (3 for three, 4 for four)
+         * @returns {boolean} True if move creates a double threat
+         */
+        function wouldCreateDoubleThreat(row, col, threatLength) {
+            const directions = [
+                [0, 1],  // horizontal
+                [1, 0],  // vertical
+                [1, 1],  // diagonal down-right
+                [1, -1]  // diagonal down-left
+            ];
+
+            // Temporarily place the stone
+            board[row][col] = 1;
+
+            let threatCount = 0;
+
+            for (const [dr, dc] of directions) {
+                // Check if this direction contains an open threat
+                if (hasOpenThreat(row, col, dr, dc, threatLength)) {
+                    threatCount++;
+                }
+            }
+
+            // Remove the temporary stone
+            board[row][col] = 0;
+
+            return threatCount >= 2;
+        }
+
+        /**
+         * Check if there's an open threat (three or four) in a direction
+         * @param {number} row - Row index
+         * @param {number} col - Column index
+         * @param {number} dr - Row direction
+         * @param {number} dc - Column direction
+         * @param {number} threatLength - Length of threat
+         * @returns {boolean} True if there's an open threat
+         */
+        function hasOpenThreat(row, col, dr, dc, threatLength) {
+            let count = 1; // The stone we just placed
+            let open = 0;  // Count open ends
+
+            // Check forward direction
+            let r = row + dr;
+            let c = col + dc;
+            let blocked = false;
+
+            while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                if (board[r][c] === 1) {
+                    count++;
+                } else if (board[r][c] === 0) {
+                    open++;
+                    break;
+                } else {
+                    blocked = true;
+                    break;
+                }
+                r += dr;
+                c += dc;
+            }
+
+            // Check backward direction
+            r = row - dr;
+            c = col - dc;
+
+            while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                if (board[r][c] === 1) {
+                    count++;
+                } else if (board[r][c] === 0) {
+                    open++;
+                    break;
+                } else {
+                    blocked = true;
+                    break;
+                }
+                r -= dr;
+                c -= dc;
+            }
+
+            // For an open threat, we need the right count and 2 open ends
+            return count === threatLength && open === 2;
+        }
+
+        /**
+         * Find all forbidden moves for black player in Renju rules
+         */
+        function calculateForbiddenMoves() {
+            forbiddenMoves = [];
+
+            if (gameType !== "renju") {
+                return;
+            }
+
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === 0 && isForbiddenMove(i, j)) {
+                        forbiddenMoves.push({ row: i, col: j });
+                    }
+                }
+            }
+        }
+
+        /**
+         * Toggle showing/hiding forbidden moves
+         */
+        function toggleForbiddenMoves() {
+            showingForbidden = !showingForbidden;
+
+            if (showingForbidden) {
+                showForbiddenButton.textContent = translations[currentLang].hideForbidden;
+                calculateForbiddenMoves();
+            } else {
+                showForbiddenButton.textContent = translations[currentLang].showForbidden;
+            }
+
+            renderBoard();
+        }
+
+        /**
+         * Add a move to the move log
+         * @param {number} row - Row index
+         * @param {number} col - Column index
+         * @param {number} player - Player ID (1 or 2)
+         */
+        function addMoveToLog(row, col, player) {
+            const moveItem = document.createElement('div');
+            moveItem.className = 'move-item';
+
+            const playerName = player === 1 ?
+                translations[currentLang].black :
+                translations[currentLang].white;
+
+            moveItem.innerHTML = `
+                <span class="move-number">${moveCount}.</span>
+                <span class="move-player">${playerName}:</span>
+                <span class="move-position">${translations[currentLang].row} ${row + 1}, ${translations[currentLang].col} ${col + 1}</span>
+            `;
+
+            moveLogElement.appendChild(moveItem);
+
+            // Scroll to the bottom of the log
+            moveLogElement.scrollTop = moveLogElement.scrollHeight;
+        }
+
+        /**
+         * Add undo action to the move log
+         */
+        function addUndoToLog() {
+            const moveItem = document.createElement('div');
+            moveItem.className = 'move-item';
+            moveItem.style.color = '#888';
+
+            moveItem.innerHTML = `
+                <span class="move-number">-</span>
+                <span class="move-position">${translations[currentLang].undoAction}</span>
+            `;
+
+            moveLogElement.appendChild(moveItem);
+            moveLogElement.scrollTop = moveLogElement.scrollHeight;
+        }
+
+        /**
+         * Update the move counter display
+         */
+        function updateMoveCount() {
+            moveCountElement.textContent = `${translations[currentLang].moves}: ${moveCount}`;
+        }
+
+        /**
+         * Execute AI's move
+         */
+        function computerMove() {
+            if (gameOver) return;
+
+            const move = findBestMove();
+            makeMove(move.row, move.col);
+        }
+
+        /**
+         * Find the best move for the AI based on selected algorithm
+         * @returns {Object} The best move with row and column
+         */
+        function findBestMove() {
+            switch (aiAlgorithm) {
+                case "minimax":
+                    return findBestMoveUsingMinimax();
+                case "montecarlo":
+                    return findBestMoveUsingMonteCarlo();
+                case "defensive":
+                    return findBestMoveDefensive();
+                case "aggressive":
+                    return findBestMoveAggressive();
+                default:
+                    return findBestMoveUsingMinimax();
+            }
+        }
+
+        /**
+         * Find best move using the Minimax algorithm
+         * @returns {Object} The best move with row and column
+         */
+        function findBestMoveUsingMinimax() {
+            // First, check if AI can win in one move
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === 0) {
+                        board[i][j] = computerPlayer;
+                        if (checkWin(i, j)) {
+                            board[i][j] = 0; // Undo
+                            return { row: i, col: j }; // Winning move found
+                        }
+                        board[i][j] = 0; // Undo
+                    }
+                }
+            }
+
+            // Then, check if AI needs to block player's winning move
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === 0) {
+                        board[i][j] = humanPlayer;
+                        if (checkWin(i, j)) {
+                            board[i][j] = 0; // Undo
+                            return { row: i, col: j }; // Blocking move found
+                        }
+                        board[i][j] = 0; // Undo
+                    }
+                }
+            }
+
+            // Evaluation based on depth
+            let maxDepth;
+            switch (difficulty) {
+                case "easy":
+                    maxDepth = 2;
+                    break;
+                case "medium":
+                    maxDepth = 3;
+                    break;
+                case "hard":
+                    maxDepth = 4;
+                    break;
+                default:
+                    maxDepth = 3;
+            }
+
+            let bestScore = -Infinity;
+            let bestMove = { row: 0, col: 0 };
+            let possibleMoves = [];
+
+            // Get all valid moves and their scores
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === 0 && hasNeighbor(i, j)) {
+                        board[i][j] = computerPlayer;
+                        const score = minimaxAlphaBeta(board, maxDepth - 1, -Infinity, Infinity, false);
+                        board[i][j] = 0;
+
+                        possibleMoves.push({ row: i, col: j, score });
+
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMove = { row: i, col: j };
+                        }
+                    }
+                }
+            }
+
+            // Sort by score and add some randomness for top moves
+            possibleMoves.sort((a, b) => b.score - a.score);
+
+            // For easy difficulty, add more randomness
+            if (difficulty === "easy") {
+                const topMoves = possibleMoves.slice(0, Math.min(5, possibleMoves.length));
+                return topMoves[Math.floor(Math.random() * topMoves.length)];
+            }
+            // For medium, select from top 3
+            else if (difficulty === "medium") {
+                const topMoves = possibleMoves.slice(0, Math.min(3, possibleMoves.length));
+                return topMoves[Math.floor(Math.random() * topMoves.length)];
+            }
+            // For hard, usually pick the best but occasionally the second best
+            else {
+                if (possibleMoves.length > 1 && Math.random() < 0.2) {
+                    return possibleMoves[1];
+                }
+                return possibleMoves[0] || bestMove;
+            }
+        }
+
+        /**
+         * Minimax algorithm with alpha-beta pruning
+         * @param {Array} boardState - Current board state
+         * @param {number} depth - Search depth
+         * @param {number} alpha - Alpha value for pruning
+         * @param {number} beta - Beta value for pruning
+         * @param {boolean} isMaximizing - True if maximizing player's turn
+         * @returns {number} Score for the move
+         */
+        function minimaxAlphaBeta(boardState, depth, alpha, beta, isMaximizing) {
+            // Terminal conditions
+            if (depth === 0) {
+                return evaluateBoard(boardState);
+            }
+
+            if (isMaximizing) {
+                let maxScore = -Infinity;
+
+                // Optimize: only check cells with neighbors
+                for (let i = 0; i < BOARD_SIZE; i++) {
+                    for (let j = 0; j < BOARD_SIZE; j++) {
+                        if (boardState[i][j] === 0 && hasNeighbor(i, j)) {
+                            boardState[i][j] = computerPlayer;
+
+                            if (checkWin(i, j)) {
+                                boardState[i][j] = 0;
+                                return 10000 + depth; // Win found, prioritize quicker wins
+                            }
+
+                            const score = minimaxAlphaBeta(boardState, depth - 1, alpha, beta, false);
+                            boardState[i][j] = 0;
+
+                            maxScore = Math.max(maxScore, score);
+                            alpha = Math.max(alpha, score);
+
+                            if (beta <= alpha) {
+                                break; // Beta cutoff
+                            }
+                        }
+                    }
+                }
+
+                return maxScore;
+            } else {
+                let minScore = Infinity;
+
+                for (let i = 0; i < BOARD_SIZE; i++) {
+                    for (let j = 0; j < BOARD_SIZE; j++) {
+                        if (boardState[i][j] === 0 && hasNeighbor(i, j)) {
+                            boardState[i][j] = humanPlayer;
+
+                            if (checkWin(i, j)) {
+                                boardState[i][j] = 0;
+                                return -10000 - depth; // Loss found, prioritize avoiding quick losses
+                            }
+
+                            const score = minimaxAlphaBeta(boardState, depth - 1, alpha, beta, true);
+                            boardState[i][j] = 0;
+
+                            minScore = Math.min(minScore, score);
+                            beta = Math.min(beta, score);
+
+                            if (beta <= alpha) {
+                                break; // Alpha cutoff
+                            }
+                        }
+                    }
+                }
+
+                return minScore;
+            }
+        }
+
+        /**
+     * Monte Carlo Tree Search for finding the best move
+     * @returns {Object} The best move with row and column
+     */
+        function findBestMoveUsingMonteCarlo() {
+            // First, check for immediate win or block
+            const immediateMove = findImmediateMove();
+            if (immediateMove) {
+                return immediateMove;
+            }
+
+            // Number of simulations based on difficulty
+            let simulations;
+            switch (difficulty) {
+                case "easy":
+                    simulations = 100;
+                    break;
+                case "medium":
+                    simulations = 500;
+                    break;
+                case "hard":
+                    simulations = 1000;
+                    break;
+                default:
+                    simulations = 500;
+            }
+
+            // Get all valid moves
+            const validMoves = [];
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === 0 && hasNeighbor(i, j)) {
+                        validMoves.push({ row: i, col: j });
+                    }
+                }
+            }
+
+            // Initialize scores array
+            const scores = Array(validMoves.length).fill(0);
+
+            // Run Monte Carlo simulations
+            for (let i = 0; i < simulations; i++) {
+                const moveIndex = Math.floor(Math.random() * validMoves.length);
+                const move = validMoves[moveIndex];
+
+                // Copy the board for simulation
+                const boardCopy = board.map(row => [...row]);
+                boardCopy[move.row][move.col] = computerPlayer;
+
+                const result = simulateGame(boardCopy, humanPlayer);
+
+                // Update score based on simulation result
+                if (result === computerPlayer) {
+                    scores[moveIndex] += 1; // Win
+                } else if (result === 0) {
+                    scores[moveIndex] += 0.5; // Draw
+                }
+            }
+
+            // Find the move with the highest score
+            let bestScore = -1;
+            let bestIndex = 0;
+
+            for (let i = 0; i < scores.length; i++) {
+                if (scores[i] > bestScore) {
+                    bestScore = scores[i];
+                    bestIndex = i;
+                }
+            }
+
+            return validMoves[bestIndex];
+        }
+
+        /**
+         * Simulate a random game from the given board state
+         * @param {Array} boardState - Current board state
+         * @param {number} player - Player to move next
+         * @returns {number} Winner (1, 2, or 0 for draw)
+         */
+        function simulateGame(boardState, player) {
+            // Make a copy to avoid modifying the input
+            const simBoard = boardState.map(row => [...row]);
+            let currentPlayer = player;
+            let movesPlayed = 0;
+            const maxMoves = 30; // Limit simulation length
+
+            // Play moves until game over or move limit reached
+            while (movesPlayed < maxMoves) {
+                // Find valid moves
+                const validMoves = [];
+
+                for (let i = 0; i < BOARD_SIZE; i++) {
+                    for (let j = 0; j < BOARD_SIZE; j++) {
+                        if (simBoard[i][j] === 0 && hasNeighbor(i, j, simBoard)) {
+                            validMoves.push({ row: i, col: j });
+                        }
+                    }
+                }
+
+                if (validMoves.length === 0) {
+                    return 0; // Draw - no valid moves
+                }
+
+                // Choose a random move
+                const move = validMoves[Math.floor(Math.random() * validMoves.length)];
+                simBoard[move.row][move.col] = currentPlayer;
+
+                // Check if the game is over
+                if (checkWinSimulation(move.row, move.col, simBoard)) {
+                    return currentPlayer; // Current player wins
+                }
+
+                // Switch players
+                currentPlayer = currentPlayer === 1 ? 2 : 1;
+                movesPlayed++;
+            }
+
+            // If we reach here, evaluate the board state
+            const score = evaluateBoardSimple(simBoard);
+            if (score > 0) {
+                return computerPlayer; // Computer ahead
+            } else if (score < 0) {
+                return humanPlayer; // Human ahead
+            } else {
+                return 0; // Draw
+            }
+        }
+
+        /**
+         * Check if a move results in a win in simulation
+         * @param {number} row - Row index of the last move
+         * @param {number} col - Column index of the last move
+         * @param {Array} boardState - Current board state
+         * @returns {boolean} True if the move results in a win
+         */
+        function checkWinSimulation(row, col, boardState) {
+            const player = boardState[row][col];
+            const directions = [
+                [0, 1],  // horizontal
+                [1, 0],  // vertical
+                [1, 1],  // diagonal down-right
+                [1, -1]  // diagonal down-left
+            ];
+
+            for (const [dr, dc] of directions) {
+                let count = 1; // Start with 1 for the current stone
+
+                // Check in positive direction
+                for (let i = 1; i < 5; i++) {
+                    const r = row + dr * i;
+                    const c = col + dc * i;
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE || boardState[r][c] !== player) {
+                        break;
+                    }
+                    count++;
+                }
+
+                // Check in negative direction
+                for (let i = 1; i < 5; i++) {
+                    const r = row - dr * i;
+                    const c = col - dc * i;
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE || boardState[r][c] !== player) {
+                        break;
+                    }
+                    count++;
+                }
+
+                if (count >= 5) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * Find the best move with a defensive strategy
+         * @returns {Object} The best move with row and column
+         */
+        function findBestMoveDefensive() {
+            // First check immediate win or block
+            const immediateMove = findImmediateMove();
+            if (immediateMove) {
+                return immediateMove;
+            }
+
+            let bestScore = -Infinity;
+            let bestMove = null;
+            let possibleMoves = [];
+
+            // Evaluate all valid moves
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === 0 && hasNeighbor(i, j)) {
+                        // Calculate defensive score (higher weight on blocking opponent)
+                        let defensiveScore = evaluateDefensiveMove(i, j);
+
+                        // Add randomness based on difficulty
+                        if (difficulty === "easy") {
+                            defensiveScore += Math.random() * 50;
+                        } else if (difficulty === "medium") {
+                            defensiveScore += Math.random() * 20;
+                        } else {
+                            defensiveScore += Math.random() * 5;
+                        }
+
+                        possibleMoves.push({ row: i, col: j, score: defensiveScore });
+
+                        if (defensiveScore > bestScore) {
+                            bestScore = defensiveScore;
+                            bestMove = { row: i, col: j };
+                        }
+                    }
+                }
+            }
+
+            // Sort moves by score
+            possibleMoves.sort((a, b) => b.score - a.score);
+
+            // Select a move based on difficulty
+            if (difficulty === "easy") {
+                const topMoves = possibleMoves.slice(0, Math.min(5, possibleMoves.length));
+                return topMoves[Math.floor(Math.random() * topMoves.length)];
+            } else if (difficulty === "medium") {
+                const topMoves = possibleMoves.slice(0, Math.min(3, possibleMoves.length));
+                return topMoves[Math.floor(Math.random() * topMoves.length)];
+            } else {
+                // For hard, pick the best move
+                return possibleMoves[0] || bestMove;
+            }
+        }
+
+        /**
+         * Evaluate a move for defensive strategy
+         * @param {number} row - Row index
+         * @param {number} col - Column index
+         * @returns {number} Score for the move
+         */
+        function evaluateDefensiveMove(row, col) {
+            let score = 0;
+
+            // Evaluate blocking opponent's threats (higher weight)
+            board[row][col] = humanPlayer;
+            score += evaluatePosition(row, col, humanPlayer) * 1.5;
+            board[row][col] = 0;
+
+            // Evaluate offensive potential (lower weight)
+            board[row][col] = computerPlayer;
+            score += evaluatePosition(row, col, computerPlayer) * 0.8;
+            board[row][col] = 0;
+
+            return score;
+        }
+
+        /**
+         * Find the best move with an aggressive strategy
+         * @returns {Object} The best move with row and column
+         */
+        function findBestMoveAggressive() {
+            // First check immediate win or block
+            const immediateMove = findImmediateMove();
+            if (immediateMove) {
+                return immediateMove;
+            }
+
+            let bestScore = -Infinity;
+            let bestMove = null;
+            let possibleMoves = [];
+
+            // Evaluate all valid moves
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === 0 && hasNeighbor(i, j)) {
+                        // Calculate aggressive score (higher weight on building own threats)
+                        let aggressiveScore = evaluateAggressiveMove(i, j);
+
+                        // Add randomness based on difficulty
+                        if (difficulty === "easy") {
+                            aggressiveScore += Math.random() * 50;
+                        } else if (difficulty === "medium") {
+                            aggressiveScore += Math.random() * 20;
+                        } else {
+                            aggressiveScore += Math.random() * 5;
+                        }
+
+                        possibleMoves.push({ row: i, col: j, score: aggressiveScore });
+
+                        if (aggressiveScore > bestScore) {
+                            bestScore = aggressiveScore;
+                            bestMove = { row: i, col: j };
+                        }
+                    }
+                }
+            }
+
+            // Sort moves by score
+            possibleMoves.sort((a, b) => b.score - a.score);
+
+            // Select a move based on difficulty
+            if (difficulty === "easy") {
+                const topMoves = possibleMoves.slice(0, Math.min(5, possibleMoves.length));
+                return topMoves[Math.floor(Math.random() * topMoves.length)];
+            } else if (difficulty === "medium") {
+                const topMoves = possibleMoves.slice(0, Math.min(3, possibleMoves.length));
+                return topMoves[Math.floor(Math.random() * topMoves.length)];
+            } else {
+                // For hard, pick the best move
+                return possibleMoves[0] || bestMove;
+            }
+        }
+
+        /**
+         * Evaluate a move for aggressive strategy
+         * @param {number} row - Row index
+         * @param {number} col - Column index
+         * @returns {number} Score for the move
+         */
+        function evaluateAggressiveMove(row, col) {
+            let score = 0;
+
+            // Evaluate offensive potential (higher weight)
+            board[row][col] = computerPlayer;
+            score += evaluatePosition(row, col, computerPlayer) * 2.0;
+            board[row][col] = 0;
+
+            // Evaluate blocking opponent's threats (lower weight)
+            board[row][col] = humanPlayer;
+            score += evaluatePosition(row, col, humanPlayer) * 0.7;
+            board[row][col] = 0;
+
+            return score;
+        }
+
+        /**
+         * Find immediate win or block move
+         * @returns {Object|null} Move with row and column, or null if none found
+         */
+        function findImmediateMove() {
+            // First, check if AI can win in one move
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === 0) {
+                        board[i][j] = computerPlayer;
+                        if (checkWin(i, j)) {
+                            board[i][j] = 0; // Undo
+                            return { row: i, col: j }; // Winning move found
+                        }
+                        board[i][j] = 0; // Undo
+                    }
+                }
+            }
+
+            // Then, check if AI needs to block player's winning move
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === 0) {
+                        board[i][j] = humanPlayer;
+                        if (checkWin(i, j)) {
+                            board[i][j] = 0; // Undo
+                            return { row: i, col: j }; // Blocking move found
+                        }
+                        board[i][j] = 0; // Undo
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /**
+         * Check if a cell has any neighbors (stones within 2 cells)
+         * @param {number} row - Row index
+         * @param {number} col - Column index
+         * @param {Array} boardState - Optional board state to check (default is current board)
+         * @returns {boolean} True if the cell has neighbors
+         */
+        function hasNeighbor(row, col, boardState = board) {
+            for (let i = Math.max(0, row - 2); i <= Math.min(BOARD_SIZE - 1, row + 2); i++) {
+                for (let j = Math.max(0, col - 2); j <= Math.min(BOARD_SIZE - 1, col + 2); j++) {
+                    if (boardState[i][j] !== 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Evaluate the entire board state
+         * @param {Array} boardState - Current board state
+         * @returns {number} Score for the board state
+         */
+        function evaluateBoard(boardState) {
+            let score = 0;
+
+            // Evaluate all positions
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (boardState[i][j] === computerPlayer) {
+                        score += evaluatePosition(i, j, computerPlayer, boardState);
+                    } else if (boardState[i][j] === humanPlayer) {
+                        score -= evaluatePosition(i, j, humanPlayer, boardState);
+                    }
+                }
+            }
+
+            return score;
+        }
+
+        /**
+         * Simple board evaluation for Monte Carlo simulation
+         * @param {Array} boardState - Current board state
+         * @returns {number} Score for the board state
+         */
+        function evaluateBoardSimple(boardState) {
+            let computerScore = 0;
+            let humanScore = 0;
+
+            // Count runs of different lengths
+            const counts = countRuns(boardState);
+
+            // Weight each run type
+            computerScore += counts.computer[5] * 1000; // Five in a row
+            computerScore += counts.computer[4] * 100;  // Four in a row
+            computerScore += counts.computer[3] * 10;   // Three in a row
+            computerScore += counts.computer[2] * 1;    // Two in a row
+
+            humanScore += counts.human[5] * 1000; // Five in a row
+            humanScore += counts.human[4] * 100;  // Four in a row
+            humanScore += counts.human[3] * 10;   // Three in a row
+            humanScore += counts.human[2] * 1;    // Two in a row
+
+            return computerScore - humanScore;
+        }
+
+        /**
+         * Count runs of consecutive stones in all directions
+         * @param {Array} boardState - Current board state
+         * @returns {Object} Count of runs by length for each player
+         */
+        function countRuns(boardState) {
+            const counts = {
+                computer: { 2: 0, 3: 0, 4: 0, 5: 0 },
+                human: { 2: 0, 3: 0, 4: 0, 5: 0 }
+            };
+
+            const directions = [
+                [0, 1],  // horizontal
+                [1, 0],  // vertical
+                [1, 1],  // diagonal down-right
+                [1, -1]  // diagonal down-left
+            ];
+
+            // Check all positions and directions
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (boardState[i][j] === 0) continue;
+
+                    const player = boardState[i][j] === computerPlayer ? 'computer' : 'human';
+
+                    for (const [dr, dc] of directions) {
+                        let length = 1;
+
+                        // Look forward
+                        for (let k = 1; k < 5; k++) {
+                            const r = i + dr * k;
+                            const c = j + dc * k;
+                            if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE ||
+                                boardState[r][c] !== boardState[i][j]) {
+                                break;
+                            }
+                            length++;
+                        }
+
+                        // Only count runs where this is the start position
+                        const rPrev = i - dr;
+                        const cPrev = j - dc;
+                        if (rPrev < 0 || rPrev >= BOARD_SIZE || cPrev < 0 || cPrev >= BOARD_SIZE ||
+                            boardState[rPrev][cPrev] !== boardState[i][j]) {
+                            if (length >= 2 && length <= 5) {
+                                counts[player][length]++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return counts;
+        }
+
+        /**
+         * Evaluate a position for a specific player
+         * @param {number} row - Row index
+         * @param {number} col - Column index
+         * @param {number} player - Player ID (1 or 2)
+         * @param {Array} boardState - Optional board state to evaluate (default is current board)
+         * @returns {number} Score for the position
+         */
+        function evaluatePosition(row, col, player, boardState = board) {
+            const directions = [
+                [0, 1],  // horizontal
+                [1, 0],  // vertical
+                [1, 1],  // diagonal down-right
+                [1, -1]  // diagonal down-left
+            ];
+
+            let totalScore = 0;
+
+            for (const [dr, dc] of directions) {
+                let count = 1; // Count the stone we just placed
+                let open = 0;  // Count open ends
+
+                // Check forward direction
+                let r = row + dr;
+                let c = col + dc;
+                let blocked = false;
+
+                while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                    if (boardState[r][c] === player) {
+                        count++;
+                    } else if (boardState[r][c] === 0) {
+                        open++;
+                        break;
+                    } else {
+                        blocked = true;
+                        break;
+                    }
+                    r += dr;
+                    c += dc;
+                }
+
+                // Check backward direction
+                r = row - dr;
+                c = col - dc;
+
+                while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                    if (boardState[r][c] === player) {
+                        count++;
+                    } else if (boardState[r][c] === 0) {
+                        open++;
+                        break;
+                    } else {
+                        blocked = true;
+                        break;
+                    }
+                    r -= dr;
+                    c -= dc;
+                }
+
+                // Score based on count and openness
+                if (count >= 5) {
+                    totalScore += 100000; // Win
+                } else if (count === 4) {
+                    if (open === 2) totalScore += 10000; // Open four
+                    else if (open === 1) totalScore += 1000; // Half-open four
+                } else if (count === 3) {
+                    if (open === 2) totalScore += 500; // Open three
+                    else if (open === 1) totalScore += 100; // Half-open three
+                } else if (count === 2) {
+                    if (open === 2) totalScore += 50; // Open two
+                    else if (open === 1) totalScore += 10; // Half-open two
+                } else if (count === 1) {
+                    if (open === 2) totalScore += 5; // Open one
+                }
+            }
+
+            return totalScore;
+        }
+
+        /**
+         * Check if the current move results in a win
+         * @param {number} row - Row index of the last move
+         * @param {number} col - Column index of the last move
+         * @returns {boolean} True if the move results in a win
+         */
+        function checkWin(row, col) {
+            const player = board[row][col];
+            const directions = [
+                [0, 1],  // horizontal
+                [1, 0],  // vertical
+                [1, 1],  // diagonal down-right
+                [1, -1]  // diagonal down-left
+            ];
+
+            for (const [dr, dc] of directions) {
+                let count = 1; // Start with 1 for the current stone
+
+                // Check in positive direction
+                for (let i = 1; i < 5; i++) {
+                    const r = row + dr * i;
+                    const c = col + dc * i;
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE || board[r][c] !== player) {
+                        break;
+                    }
+                    count++;
+                }
+
+                // Check in negative direction
+                for (let i = 1; i < 5; i++) {
+                    const r = row - dr * i;
+                    const c = col - dc * i;
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE || board[r][c] !== player) {
+                        break;
+                    }
+                    count++;
+                }
+
+                if (count >= 5) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * Check if the game is a draw
+         * @returns {boolean} True if the game is a draw
+         */
+        function checkDraw() {
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === 0) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        /**
+         * Render the board state
+         * Updates the visual representation of stones and highlights
+         */
+        function renderBoard() {
+            // Clear any existing highlight
+            const existingHighlight = document.querySelector('.highlight');
+            if (existingHighlight) {
+                existingHighlight.remove();
+            }
+
+            // Clear any forbidden indicators
+            const existingForbidden = document.querySelectorAll('.forbidden');
+            existingForbidden.forEach(el => el.remove());
+
+            // Update stones
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    const cell = boardElement.children[i * BOARD_SIZE + j];
+
+                    // Remove existing stone if any
+                    const existingStone = cell.querySelector('.stone');
+                    if (existingStone) {
+                        cell.removeChild(existingStone);
+                    }
+
+                    // Add stone if needed
+                    if (board[i][j] !== 0) {
+                        const stone = document.createElement('div');
+                        stone.className = `stone ${board[i][j] === 1 ? 'black' : 'white'}`;
+                        cell.appendChild(stone);
+                    }
+
+                    // Show forbidden moves if toggled on
+                    if (showingForbidden && board[i][j] === 0) {
+                        const isForbidden = forbiddenMoves.some(move => move.row === i && move.col === j);
+                        if (isForbidden) {
+                            const forbidden = document.createElement('div');
+                            forbidden.className = 'forbidden';
+                            cell.appendChild(forbidden);
+                        }
+                    }
+                }
+            }
+
+            // Highlight the last move
+            if (moveHistory.length > 0) {
+                const lastMove = moveHistory[moveHistory.length - 1];
+                const lastCell = boardElement.children[lastMove.row * BOARD_SIZE + lastMove.col];
+                const highlight = document.createElement('div');
+                highlight.className = 'highlight';
+                lastCell.appendChild(highlight);
+            }
+
+            // Show hint if requested
+            if (hintMove) {
+                const hintCell = boardElement.children[hintMove.row * BOARD_SIZE + hintMove.col];
+                const hint = document.createElement('div');
+                hint.className = 'highlight';
+                hint.style.borderColor = 'var(--hint-color)';
+                hintCell.appendChild(hint);
+            }
+        }
+
+        /**
+         * Update game status display
+         * @param {string} message - Optional custom message to display
+         */
+        function updateStatus(message) {
+            if (message) {
+                statusElement.textContent = message;
+                return;
+            }
+
+            if (gamePhase === "opening") {
+                statusElement.textContent = translations[currentLang].selectPositions + ` (${openingMoves.length}/3)`;
+            } else if (gamePhase === "swap2") {
+                statusElement.textContent = translations[currentLang].selectColor;
+            } else {
+                statusElement.textContent = currentPlayer === 1 ?
+                    translations[currentLang].blackTurn :
+                    translations[currentLang].whiteTurn;
+            }
+        }
+
+        /**
+         * Undo last move(s)
+         * In one-player mode, undoes both player's and AI's moves
+         */
+        function undoMove() {
+            if (moveHistory.length === 0 || gamePhase !== "play") return;
+
+            // Undo computer's move
+            if (moveHistory.length > 0 && moveHistory[moveHistory.length - 1].player === computerPlayer) {
+                const lastMove = moveHistory.pop();
+                board[lastMove.row][lastMove.col] = 0;
+                moveCount--;
+            }
+
+            // Undo player's move
+            if (moveHistory.length > 0 && moveHistory[moveHistory.length - 1].player === humanPlayer) {
+                const playerMove = moveHistory.pop();
+                board[playerMove.row][playerMove.col] = 0;
+                moveCount--;
+            }
+
+            gameOver = false;
+            hintMove = null;
+            currentPlayer = humanPlayer;
+            renderBoard();
+            updateStatus();
+            updateMoveCount();
+
+            // Add undo action to log
+            addUndoToLog();
+        }
+
+        /**
+         * Show hint for the best move
+         * Uses AI logic to suggest a move for the player
+         */
+        function showHint() {
+            if (gameOver || currentPlayer !== humanPlayer || gamePhase !== "play") return;
+
+            // Find the best move for the player
+            const originalComputerPlayer = computerPlayer;
+            const originalHumanPlayer = humanPlayer;
+
+            // Switch perspectives to find a good move for the human
+            computerPlayer = humanPlayer;
+            humanPlayer = originalComputerPlayer;
+
+            hintMove = findBestMove();
+
+            // Restore original players
+            computerPlayer = originalComputerPlayer;
+            humanPlayer = originalHumanPlayer;
+
+            renderBoard();
+        }
+
+        /**
+         * Clear the move log
+         */
+        function clearMoveLog() {
+            moveLogElement.innerHTML = '';
+        }
+
+        /**
+         * Toggle between languages
+         */
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'tw' : 'en';
+            updateLanguage();
+        }
+
+        /**
+         * Update all text based on current language
+         */
+        function updateLanguage() {
+            // Update title and buttons
+            titleElement.textContent = translations[currentLang].title;
+            toggleLangButton.textContent = translations[currentLang].toggleLang;
+            newGameButton.textContent = translations[currentLang].newGame;
+            undoButton.textContent = translations[currentLang].undo;
+            hintButton.textContent = translations[currentLang].hint;
+            showForbiddenButton.textContent = showingForbidden ?
+                translations[currentLang].hideForbidden :
+                translations[currentLang].showForbidden;
+            clearLogButton.textContent = translations[currentLang].clearLog;
+
+            // Update dialog text
+            newGameBtn.textContent = translations[currentLang].startNewGame || "Start New Game";
+            continueBtn.textContent = translations[currentLang].continue || "Continue";
+
+            // Update select options
+            document.querySelector('label[for="ruleSelect"]').textContent = translations[currentLang].rules + ':';
+            ruleSelect.options[0].textContent = translations[currentLang].ruleStandard;
+            ruleSelect.options[1].textContent = translations[currentLang].ruleRenju;
+            ruleSelect.options[2].textContent = translations[currentLang].ruleFreestyle;
+
+            document.querySelector('label[for="aiAlgorithm"]').textContent = translations[currentLang].aiAlgorithm + ':';
+            aiAlgorithmSelect.options[0].textContent = translations[currentLang].aiMinimax;
+            aiAlgorithmSelect.options[1].textContent = translations[currentLang].aiMonteCarlo;
+            aiAlgorithmSelect.options[2].textContent = translations[currentLang].aiDefensive;
+            aiAlgorithmSelect.options[3].textContent = translations[currentLang].aiAggressive;
+
+            document.querySelector('label[for="difficultySelect"]').textContent = translations[currentLang].difficulty + ':';
+            difficultySelect.options[0].textContent = translations[currentLang].difficultyEasy;
+            difficultySelect.options[1].textContent = translations[currentLang].difficultyMedium;
+            difficultySelect.options[2].textContent = translations[currentLang].difficultyHard;
+
+            document.querySelector('label[for="colorSelect"]').textContent = translations[currentLang].playAs + ':';
+            colorSelect.options[0].textContent = translations[currentLang].playAsBlack;
+            colorSelect.options[1].textContent = translations[currentLang].playAsWhite;
+            colorSelect.options[2].textContent = translations[currentLang].playAsRandom;
+
+            // Update move count
+            updateMoveCount();
+
+            // Update status text
+            if (gameOver) {
+                if (statusElement.textContent.includes('Wins') || statusElement.textContent.includes('獲勝')) {
+                    statusElement.textContent = currentPlayer === 1 ?
+                        translations[currentLang].whiteWin :
+                        translations[currentLang].blackWin;
+                } else if (statusElement.textContent.includes('Draw') || statusElement.textContent.includes('平局')) {
+                    statusElement.textContent = translations[currentLang].draw;
+                }
+            } else if (gamePhase === "opening") {
+                statusElement.textContent = translations[currentLang].selectPositions + ` (${openingMoves.length}/3)`;
+            } else if (gamePhase === "swap2") {
+                // For swap2 phase, recreate the selection buttons with updated text
+                const blackBtn = document.createElement('button');
+                blackBtn.textContent = translations[currentLang].playAsBlack;
+                blackBtn.onclick = () => selectColorForSwap2(1);
+
+                const whiteBtn = document.createElement('button');
+                whiteBtn.textContent = translations[currentLang].playAsWhite;
+                whiteBtn.onclick = () => selectColorForSwap2(2);
+
+                statusElement.innerHTML = '';
+                statusElement.appendChild(document.createTextNode(translations[currentLang].selectColor + ' '));
+                statusElement.appendChild(blackBtn);
+                statusElement.appendChild(document.createTextNode(' '));
+                statusElement.appendChild(whiteBtn);
+            } else {
+                updateStatus();
+            }
+
+            // Update move log
+            updateMoveLog();
+        }
+
+        /**
+         * Update move log entries to current language
+         */
+        function updateMoveLog() {
+            const moveItems = moveLogElement.querySelectorAll('.move-item');
+
+            moveItems.forEach(item => {
+                const text = item.textContent.trim();
+
+                // Skip undo actions
+                if (text.includes('Undid move') || text.includes('悔棋操作')) {
+                    item.querySelector('.move-position').textContent = translations[currentLang].undoAction;
+                    return;
+                }
+
+                // Update player names
+                const moveNumber = item.querySelector('.move-number').textContent;
+                const isBlack = text.includes('Black') || text.includes('黑方');
+
+                // Extract row and column numbers from the position text
+                const position = item.querySelector('.move-position').textContent;
+                const matches = position.match(/\d+/g);
+
+                if (matches && matches.length >= 2) {
+                    const row = parseInt(matches[0]);
+                    const col = parseInt(matches[1]);
+
+                    const playerName = isBlack ?
+                        translations[currentLang].black :
+                        translations[currentLang].white;
+
+                    item.querySelector('.move-player').textContent = `${playerName}:`;
+                    item.querySelector('.move-position').textContent =
+                        `${translations[currentLang].row} ${row}, ${translations[currentLang].col} ${col}`;
+                }
+            });
+        }
+
+        // Initialize the game when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>
